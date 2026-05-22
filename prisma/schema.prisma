@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ReadingStatus {
+  UNREAD
+  READING
+  READ
+}
+
+enum EntityType {
+  AUTHOR
+  CATEGORY
+  SHELF
+}
+
+model Book {
+  id         String        @id @default(cuid())
+  userId     String
+  title      String
+  author     String
+  coverUrl   String        @default("")
+  category   String        @default("Uncategorized")
+  shelf      String        @default("General")
+  acquiredAt DateTime?
+  status     ReadingStatus @default(UNREAD)
+  rating     Int?
+  notes      String        @default("")
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([title])
+  @@index([author])
+  @@index([category])
+  @@index([shelf])
+  @@index([status])
+}
+
+model LibraryEntity {
+  id        String     @id @default(cuid())
+  userId    String
+  type      EntityType
+  name      String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@unique([userId, type, name])
+  @@index([userId, type])
+}

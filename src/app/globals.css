@@ -1,26 +1,182 @@
 @import "tailwindcss";
+@import "@neondatabase/auth/ui/tailwind";
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fafaf9;
+  --foreground: #1c1917;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.dark {
+  --background: #020617;
+  --foreground: #f8fafc;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+.input {
+  min-height: 2.5rem;
+  width: 100%;
+  border-radius: 0.375rem;
+  border: 1px solid #d6d3d1;
+  background: #ffffff;
+  padding: 0.5rem 0.75rem;
+  color: #1c1917;
+  outline: none;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    background-color 150ms ease;
+}
+
+.input:focus {
+  border-color: #0f766e;
+  box-shadow: 0 0 0 3px rgb(15 118 110 / 0.16);
+}
+
+.dark .input {
+  border-color: #334155;
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+.dark .input:focus {
+  border-color: #2dd4bf;
+  box-shadow: 0 0 0 3px rgb(45 212 191 / 0.16);
+}
+
+.icon-button {
+  display: inline-flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  border: 1px solid #d6d3d1;
+  background: #ffffff;
+  color: #44403c;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease;
+}
+
+.icon-button:hover {
+  background: #f5f5f4;
+  color: #1c1917;
+}
+
+.dark .icon-button {
+  border-color: #334155;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+.dark .icon-button:hover {
+  background: #1e293b;
+  color: #ffffff;
+}
+
+.secondary-button {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.375rem;
+  border: 1px solid #d6d3d1;
+  background: #ffffff;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1c1917;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.secondary-button:hover {
+  background: #f5f5f4;
+  border-color: #0f766e;
+}
+
+.primary-link {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  background: #0f766e;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #ffffff;
+  transition: background-color 150ms ease;
+}
+
+.primary-link:hover {
+  background: #115e59;
+}
+
+.secondary-link {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  border: 1px solid #d6d3d1;
+  background: #ffffff;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #1c1917;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.secondary-link:hover {
+  border-color: #0f766e;
+  background: #f5f5f4;
+}
+
+.dark .secondary-link {
+  border-color: #334155;
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+.dark .secondary-link:hover {
+  border-color: #2dd4bf;
+  background: #1e293b;
+}
+
+.dark .secondary-button {
+  border-color: #334155;
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+.dark .secondary-button:hover {
+  background: #1e293b;
+  border-color: #2dd4bf;
 }

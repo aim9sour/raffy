@@ -7,56 +7,57 @@ import { SeoJsonLd } from "@/components/seo-json-ld";
 import { site } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "رَفّي | منصة تنظيم الكتب والمكتبة الشخصية",
-  description: site.descriptionAr,
-  keywords: site.keywordsAr,
+  title: "Raffy | Personal Library Organizer and Offline Book Tracker",
+  description: site.descriptionEn,
+  keywords: site.keywordsEn,
   alternates: {
-    canonical: "/",
+    canonical: "/en",
     languages: { ar: "/", en: "/en", "x-default": "/" },
   },
   openGraph: {
-    title: "رَفّي | Raffy",
-    description: site.descriptionAr,
-    url: "/",
-    siteName: "رَفّي",
-    locale: "ar_EG",
+    title: "Raffy | Personal Library Organizer",
+    description: site.descriptionEn,
+    url: "/en",
+    siteName: "Raffy",
+    locale: "en_US",
     type: "website",
   },
-  twitter: { card: "summary", title: "رَفّي | Raffy", description: site.descriptionAr },
+  twitter: { card: "summary", title: "Raffy | Personal Library Organizer", description: site.descriptionEn },
 };
 
 const features = [
-  ["بحث سريع", "اعثر على أي كتاب من الاسم أو المؤلف أو الفئة أو الملاحظات.", Search],
-  ["تنظيم مرن", "أنشئ مؤلفين وفئات ورفوف وعدّلهم بما يناسب مكتبتك.", Layers3],
-  ["يعمل دون اتصال", "استخدم رَفّي من الهاتف حتى بدون إنترنت، ثم اتركه يزامن لاحقًا.", Cloud],
-  ["نسخ احتياطي", "صدّر واستورد مكتبتك بسهولة حتى لا تفقد بياناتك.", Database],
-  ["وضع ليلي", "واجهة هادئة مناسبة للقراءة والإدارة في أي وقت.", Moon],
-  ["عربي وإنجليزي", "تجربة مريحة لك ولأي شخص يفضّل إحدى اللغتين.", Languages],
+  ["Fast search", "Find any book by title, author, category, shelf, or notes.", Search],
+  ["Flexible organization", "Create authors, categories, and shelves that match your library.", Layers3],
+  ["Offline work", "Use Raffy on your phone offline; it syncs when connection returns.", Cloud],
+  ["Portable backups", "Export and import your personal library whenever you need.", Database],
+  ["Dark mode", "A calm interface for daily book management.", Moon],
+  ["Arabic and English", "A comfortable bilingual experience for readers and collectors.", Languages],
 ] as const;
 
-export default function Home() {
+export default function EnglishHome() {
   return (
-    <main className="min-h-screen bg-stone-50 text-stone-950 dark:bg-slate-950 dark:text-slate-50">
-      <SeoJsonLd locale="ar" page="home" />
-      <MarketingHeader locale="ar" />
+    <main dir="ltr" className="min-h-screen bg-stone-50 text-stone-950 dark:bg-slate-950 dark:text-slate-50">
+      <SeoJsonLd locale="en" page="home" />
+      <MarketingHeader locale="en" />
       <section className="mx-auto grid max-w-7xl gap-10 px-4 pb-14 pt-8 sm:px-6 lg:grid-cols-[1fr_460px] lg:px-8 lg:pt-14">
         <div className="flex flex-col justify-center">
           <p className="w-fit rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-sm font-medium text-teal-800 dark:border-teal-900 dark:bg-teal-950 dark:text-teal-200">
-            مكتبتك الشخصية بشكل أهدأ وأذكى
+            A calmer home for your personal library
           </p>
           <h1 className="mt-5 max-w-3xl text-4xl font-bold leading-tight sm:text-5xl">
-            رَفّي يرتّب كتبك وملاحظاتك ورفوفك في مساحة واحدة جميلة.
+            Raffy keeps your books, notes, authors, and shelves beautifully organized.
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-700 dark:text-slate-300">
-            أضف كتبك، احفظ المؤلفين والفئات وتاريخ الاقتناء، دوّن ملاحظاتك، واعمل من الهاتف
-            أو الكمبيوتر حتى لو انقطع الإنترنت. رَفّي يحفظ ما تفعله ويزامنه عندما يعود الاتصال.
+            Add books, track authors and categories, keep acquisition dates and reading notes,
+            and continue working from your phone even when the internet drops. Raffy saves your
+            edits locally and syncs them when you reconnect.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Link className="primary-link h-12 px-5 text-base" href="/auth/sign-up">
-              ابدأ مكتبتك الآن
+              Start your library
             </Link>
-            <Link className="secondary-link h-12 px-5 text-base" href="/about">
-              اعرف قصة رَفّي
+            <Link className="secondary-link h-12 px-5 text-base" href="/en/about">
+              Read the story
             </Link>
           </div>
         </div>
@@ -77,7 +78,7 @@ export default function Home() {
           </div>
         </div>
       </section>
-      <MarketingFooter locale="ar" />
+      <MarketingFooter locale="en" />
     </main>
   );
 }

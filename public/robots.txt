@@ -1,0 +1,28 @@
+# *
+User-agent: *
+Allow: /
+Allow: /en
+Allow: /features
+Allow: /en/features
+Allow: /about
+Allow: /en/about
+Allow: /creator
+Allow: /en/creator
+Allow: /use-cases
+Allow: /en/use-cases
+Allow: /contact
+Allow: /en/contact
+Allow: /icon.svg
+Allow: /manifest.webmanifest
+Allow: /llms.txt
+Allow: /humans.txt
+Disallow: /api/
+Disallow: /auth/
+Disallow: /account/
+Disallow: /library
+
+# Host
+Host: https://raffy-library.vercel.app
+
+# Sitemaps
+Sitemap: https://raffy-library.vercel.app/sitemap.xml

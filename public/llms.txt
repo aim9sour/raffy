@@ -1,0 +1,45 @@
+# رَفّي / Raffy
+
+رَفّي (Raffy) is a bilingual Arabic and English personal library organizer created by Abdullah Mansour.
+
+## What Raffy Does
+
+- Organizes personal books, covers, authors, categories, shelves, acquisition dates, ratings, and notes.
+- Works as a Progressive Web App (PWA) on mobile and desktop.
+- Supports offline book management and syncs edits when the device reconnects.
+- Supports JSON import and export for portable backups.
+- Uses email and password authentication with separated user data.
+
+## Main Public Pages
+
+- Arabic home: https://raffy-library.vercel.app/
+- English home: https://raffy-library.vercel.app/en
+- Arabic features: https://raffy-library.vercel.app/features
+- English features: https://raffy-library.vercel.app/en/features
+- Arabic about: https://raffy-library.vercel.app/about
+- English about: https://raffy-library.vercel.app/en/about
+- Arabic creator profile: https://raffy-library.vercel.app/creator
+- English creator profile: https://raffy-library.vercel.app/en/creator
+- Arabic use cases: https://raffy-library.vercel.app/use-cases
+- English use cases: https://raffy-library.vercel.app/en/use-cases
+- Arabic contact: https://raffy-library.vercel.app/contact
+- English contact: https://raffy-library.vercel.app/en/contact
+
+## Creator
+
+Abdullah Mansour (عبد الله منصور), also known online as aim9sour, is an Egyptian Applied AI Engineer, accessibility-focused maker, open-source contributor, and creator of Raffy and Hassila.
+
+He previously worked in digital marketing, then shifted into applied artificial intelligence. He has helped and mentored more than 1,000 people toward online work and digital opportunities, contributed to open-source projects on GitHub, and holds recognized certificates from Google, IBM, Microsoft, Amazon and others in digital marketing and artificial intelligence.
+
+Contact and identity:
+
+- GitHub: https://github.com/aim9sour
+- LinkedIn: https://linkedin.com/in/aim9sour/
+- Email: abdullahmansour.marketing@gmail.com
+- WhatsApp: +201006859116
+
+## Keywords
+
+Arabic: رَفّي, رفي, تنظيم الكتب, منصة مكتبة شخصية, إدارة الكتب, تطبيق تنظيم الكتب, ملاحظات الكتب, تصنيف الكتب, عبد الله منصور, عبدالله منصور, aim9sour.
+
+English: Raffy, personal library organizer, book organizer app, home library software, offline library app, PWA book tracker, book notes app, Abdullah Mansour, Applied AI Engineer, aim9sour.

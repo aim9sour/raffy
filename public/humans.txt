@@ -1,0 +1,17 @@
+/* TEAM */
+
+Creator: Abdullah Mansour
+Arabic name: عبد الله منصور
+Role: Applied AI Engineer
+Location: Egypt
+GitHub: https://github.com/aim9sour
+LinkedIn: https://linkedin.com/in/aim9sour/
+Email: abdullahmansour.marketing@gmail.com
+WhatsApp: +201006859116
+
+/* SITE */
+
+Name: رَفّي / Raffy
+URL: https://raffy-library.vercel.app
+Purpose: Bilingual personal library organizer and offline-first PWA for books, authors, categories, shelves, and reading notes.
+Built as: A digital gift to the community.
