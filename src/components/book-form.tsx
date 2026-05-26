@@ -26,6 +26,8 @@ type Props = {
   locale: Locale;
   onClose: () => void;
   onSave: (book: BookInput, id?: string) => Promise<void>;
+  surface?: "card" | "plain";
+  hideHeader?: boolean;
 };
 
 const copy = {
@@ -81,7 +83,16 @@ const copy = {
   },
 };
 
-export function BookForm({ book, entities, books, locale, onClose, onSave }: Props) {
+export function BookForm({
+  book,
+  entities,
+  books,
+  locale,
+  onClose,
+  onSave,
+  surface = "card",
+  hideHeader = false,
+}: Props) {
   const [form, setForm] = useState<BookInput>(() => getInitialForm(book));
   const [saving, setSaving] = useState(false);
   const t = copy[locale];
@@ -114,21 +125,27 @@ export function BookForm({ book, entities, books, locale, onClose, onSave }: Pro
   return (
     <form
       onSubmit={submit}
-      className="space-y-4 rounded-lg border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+      className={
+        surface === "card"
+          ? "space-y-4 rounded-lg border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+          : "space-y-4"
+      }
     >
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-stone-950 dark:text-slate-50">
-          {book ? t.edit : t.add}
-        </h2>
-        <button
-          type="button"
-          onClick={onClose}
-          title={t.close}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-md text-stone-500 hover:bg-stone-100 dark:text-slate-300 dark:hover:bg-slate-800"
-        >
-          <X size={18} />
-        </button>
-      </div>
+      {hideHeader ? null : (
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-stone-950 dark:text-slate-50">
+            {book ? t.edit : t.add}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            title={t.close}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md text-stone-500 hover:bg-stone-100 dark:text-slate-300 dark:hover:bg-slate-800"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
 
       <Field label={t.title}>
         <input

@@ -44,6 +44,7 @@ import {
   type EntityUpdateInput,
   type EntityView,
 } from "./entity-manager";
+import { AppModal } from "./app-modal";
 import { BookCoverTile, CollectionCover } from "./library-covers";
 import { LanguageToggle } from "./language-toggle";
 import { ThemeToggle } from "./theme-toggle";
@@ -95,6 +96,9 @@ const copy = {
     subtitle: "مكتبتك، مؤلفوك، فئاتك ورفوفك في مكان واحد",
     refresh: "تحديث",
     addBook: "كتاب",
+    addBookTitle: "إضافة كتاب",
+    editBookTitle: "تعديل كتاب",
+    close: "إغلاق",
     stats: {
       total: "كل الكتب",
       reading: "يقرأ الآن",
@@ -160,6 +164,9 @@ const copy = {
     subtitle: "Your books, authors, categories and shelves in one place",
     refresh: "Refresh",
     addBook: "Book",
+    addBookTitle: "Add book",
+    editBookTitle: "Edit book",
+    close: "Close",
     stats: {
       total: "All books",
       reading: "Reading",
@@ -1119,18 +1126,6 @@ export function LibraryApp() {
           {renderMainContent()}
 
           <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start">
-            {showForm ? (
-              <BookForm
-                key={editing?.id ?? "new-book"}
-                book={editing}
-                books={books}
-                entities={entities}
-                locale={locale}
-                onClose={closeBookForm}
-                onSave={saveBook}
-              />
-            ) : null}
-
             <EntityManager
               entities={entities}
               locale={locale}
@@ -1166,6 +1161,27 @@ export function LibraryApp() {
             </div>
           </aside>
         </section>
+
+        {showForm ? (
+          <AppModal
+            title={editing ? t.editBookTitle : t.addBookTitle}
+            closeLabel={t.close}
+            onClose={closeBookForm}
+            size="lg"
+          >
+            <BookForm
+              key={editing?.id ?? "new-book"}
+              book={editing}
+              books={books}
+              entities={entities}
+              locale={locale}
+              onClose={closeBookForm}
+              onSave={saveBook}
+              surface="plain"
+              hideHeader
+            />
+          </AppModal>
+        ) : null}
       </div>
     </main>
   );
