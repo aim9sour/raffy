@@ -6,15 +6,18 @@ import {
   Download,
   Filter,
   Library,
+  List,
   Plus,
   RefreshCw,
   Search,
   Upload,
+  UserRound,
   WifiOff,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { BookInput, LibraryBook, ReadingStatus } from "@/lib/book-schema";
 import { filterBooks, getLibraryStats } from "@/lib/book-filters";
+import { buildAuthorGroups, buildCategoryGroups } from "@/lib/book-navigation";
 import {
   buildExportPayload,
   parseImportedBooks,
@@ -33,7 +36,7 @@ import {
   type OfflineOperation,
 } from "@/lib/offline-store";
 import { getBrowserLocale, localeLabels, type Locale } from "@/lib/i18n";
-import { BookCard } from "./book-card";
+import { BookDetailPanel, bookToInput } from "./book-detail-panel";
 import { BookForm } from "./book-form";
 import {
   EntityManager,
@@ -41,10 +44,51 @@ import {
   type EntityUpdateInput,
   type EntityView,
 } from "./entity-manager";
+import { BookCoverTile, CollectionCover } from "./library-covers";
 import { LanguageToggle } from "./language-toggle";
 import { ThemeToggle } from "./theme-toggle";
 
 type LoadState = "idle" | "loading" | "ready" | "error";
+type LibraryTab = "categories" | "authors" | "books";
+
+const navigationCopy = {
+  ar: {
+    tabs: { categories: "الفئات", authors: "المؤلفون", books: "الكتب" },
+    categories: "الفئات",
+    shelves: "الرفوف",
+    authors: "المؤلفون",
+    books: "الكتب",
+    book: "كتاب",
+    shelf: "رف",
+    author: "مؤلف",
+    category: "فئة",
+    chooseCategory: "اختر فئة لتصفح رفوفها.",
+    chooseShelf: "اختر رفًا لعرض كتبه داخل هذه الفئة.",
+    allBooks: "كل الكتب",
+    allAuthors: "كل المؤلفين",
+    backToCategories: "العودة للفئات",
+    backToShelves: "العودة للرفوف",
+    backToAuthors: "العودة للمؤلفين",
+  },
+  en: {
+    tabs: { categories: "Categories", authors: "Authors", books: "Books" },
+    categories: "Categories",
+    shelves: "Shelves",
+    authors: "Authors",
+    books: "Books",
+    book: "Book",
+    shelf: "Shelf",
+    author: "Author",
+    category: "Category",
+    chooseCategory: "Choose a category to browse its shelves.",
+    chooseShelf: "Choose a shelf to see its books in this category.",
+    allBooks: "All books",
+    allAuthors: "All authors",
+    backToCategories: "Back to categories",
+    backToShelves: "Back to shelves",
+    backToAuthors: "Back to authors",
+  },
+};
 
 const copy = {
   ar: {
@@ -193,12 +237,18 @@ export function LibraryApp() {
   );
   const [editing, setEditing] = useState<LibraryBook | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [activeTab, setActiveTab] = useState<LibraryTab>("categories");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedShelf, setSelectedShelf] = useState("");
+  const [selectedAuthor, setSelectedAuthor] = useState("");
+  const [selectedBookId, setSelectedBookId] = useState("");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [shelf, setShelf] = useState("");
   const [status, setStatus] = useState<ReadingStatus | "ALL">("ALL");
   const fileRef = useRef<HTMLInputElement>(null);
   const t = copy[locale];
+  const navT = navigationCopy[locale];
 
   useEffect(() => {
     void loadLibrary();
@@ -231,9 +281,28 @@ export function LibraryApp() {
     [books, category, search, shelf, status],
   );
   const stats = useMemo(() => getLibraryStats(books), [books]);
-  const authors = entities.filter((entity) => entity.type === "AUTHOR");
-  const categories = entities.filter((entity) => entity.type === "CATEGORY");
-  const shelves = entities.filter((entity) => entity.type === "SHELF");
+  const authors = useMemo(() => entities.filter((entity) => entity.type === "AUTHOR"), [entities]);
+  const categories = useMemo(() => entities.filter((entity) => entity.type === "CATEGORY"), [entities]);
+  const shelves = useMemo(() => entities.filter((entity) => entity.type === "SHELF"), [entities]);
+  const categoryGroups = useMemo(
+    () =>
+      buildCategoryGroups(books, {
+        categories: categories.map((item) => item.name),
+        shelves: shelves.map((item) => item.name),
+      }),
+    [books, categories, shelves],
+  );
+  const authorGroups = useMemo(
+    () => buildAuthorGroups(books, authors.map((item) => item.name)),
+    [authors, books],
+  );
+  const selectedCategoryGroup = categoryGroups.find((group) => group.name === selectedCategory);
+  const selectedShelfGroup = selectedCategoryGroup?.shelves.find((group) => group.name === selectedShelf);
+  const selectedAuthorGroup = authorGroups.find((group) => group.name === selectedAuthor);
+  const selectedBook = useMemo(
+    () => books.find((book) => book.id === selectedBookId) ?? null,
+    [books, selectedBookId],
+  );
 
   async function loadLibrary() {
     const activeCopy = copy[getBrowserLocale()];
@@ -339,6 +408,7 @@ export function LibraryApp() {
       removeQueuedCreate(book.id);
       refreshPendingCount();
       updateBooks((current) => current.filter((item) => item.id !== book.id));
+      setSelectedBookId((current) => (current === book.id ? "" : current));
       setSyncMessage(activeCopy.messages.localDeleted);
       return;
     }
@@ -348,6 +418,7 @@ export function LibraryApp() {
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? activeCopy.errors.deleteBook);
       updateBooks((current) => current.filter((item) => item.id !== book.id));
+      setSelectedBookId((current) => (current === book.id ? "" : current));
     } catch (deleteError) {
       if (!shouldQueueOffline(deleteError)) {
         setError(deleteError instanceof Error ? deleteError.message : activeCopy.errors.deleteBook);
@@ -357,6 +428,7 @@ export function LibraryApp() {
       enqueueOfflineOperation({ id: createLocalId("queue"), type: "delete-book", remoteId: book.id });
       refreshPendingCount();
       updateBooks((current) => current.filter((item) => item.id !== book.id));
+      setSelectedBookId((current) => (current === book.id ? "" : current));
       setSyncMessage(activeCopy.messages.bookDeletedLocal);
     }
   }
@@ -659,6 +731,298 @@ export function LibraryApp() {
     );
   }
 
+  function switchTab(tab: LibraryTab) {
+    setActiveTab(tab);
+    setSelectedBookId("");
+    if (tab !== "categories") {
+      setSelectedCategory("");
+      setSelectedShelf("");
+    }
+    if (tab !== "authors") setSelectedAuthor("");
+  }
+
+  function openBook(book: LibraryBook) {
+    setSelectedBookId(book.id);
+    setShowForm(false);
+  }
+
+  function openCategory(name: string) {
+    setActiveTab("categories");
+    setSelectedCategory(name);
+    setSelectedShelf("");
+    setSelectedAuthor("");
+    setSelectedBookId("");
+  }
+
+  function openShelf(categoryName: string, shelfName: string) {
+    setActiveTab("categories");
+    setSelectedCategory(categoryName);
+    setSelectedShelf(shelfName);
+    setSelectedAuthor("");
+    setSelectedBookId("");
+  }
+
+  function openAuthor(name: string) {
+    setActiveTab("authors");
+    setSelectedAuthor(name);
+    setSelectedCategory("");
+    setSelectedShelf("");
+    setSelectedBookId("");
+  }
+
+  async function saveBookNotes(book: LibraryBook, notes: string) {
+    await saveBook({ ...bookToInput(book), notes }, book.id);
+  }
+
+  function renderMainContent() {
+    return (
+      <div className="space-y-4">
+        {renderTabs()}
+        {selectedBook ? (
+          <BookDetailPanel
+            key={selectedBook.id}
+            book={selectedBook}
+            locale={locale}
+            onBack={() => setSelectedBookId("")}
+            onEdit={(book) => {
+              setEditing(book);
+              setShowForm(true);
+            }}
+            onDelete={(book) => void deleteBook(book)}
+            onSaveNotes={saveBookNotes}
+            onOpenAuthor={openAuthor}
+            onOpenCategory={openCategory}
+            onOpenShelf={openShelf}
+          />
+        ) : activeTab === "categories" ? (
+          renderCategoriesView()
+        ) : activeTab === "authors" ? (
+          renderAuthorsView()
+        ) : (
+          renderBooksView()
+        )}
+      </div>
+    );
+  }
+
+  function renderTabs() {
+    return (
+      <div className="grid gap-2 rounded-lg border border-stone-200 bg-white p-2 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:grid-cols-3">
+        <TabButton
+          active={activeTab === "categories"}
+          icon={<Library size={17} />}
+          label={navT.tabs.categories}
+          onClick={() => switchTab("categories")}
+        />
+        <TabButton
+          active={activeTab === "authors"}
+          icon={<UserRound size={17} />}
+          label={navT.tabs.authors}
+          onClick={() => switchTab("authors")}
+        />
+        <TabButton
+          active={activeTab === "books"}
+          icon={<List size={17} />}
+          label={navT.tabs.books}
+          onClick={() => switchTab("books")}
+        />
+      </div>
+    );
+  }
+
+  function renderCategoriesView() {
+    if (!selectedCategory) {
+      return (
+        <section className="space-y-4">
+          <SectionIntro title={navT.categories} text={navT.chooseCategory} />
+          {categoryGroups.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {categoryGroups.map((group) => (
+                <CollectionCover
+                  key={group.name}
+                  kind="category"
+                  title={group.name}
+                  subtitle={navT.category}
+                  locale={locale}
+                  stats={[
+                    { label: navT.books, value: group.bookCount },
+                    { label: navT.shelves, value: group.shelfCount },
+                  ]}
+                  onClick={() => openCategory(group.name)}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyState title={t.emptyTitle} text={t.emptyText} />
+          )}
+        </section>
+      );
+    }
+
+    if (!selectedShelf) {
+      return (
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <SectionIntro title={selectedCategory} text={navT.chooseShelf} />
+            <button type="button" className="secondary-button" onClick={() => setSelectedCategory("")}>
+              {navT.backToCategories}
+            </button>
+          </div>
+          {selectedCategoryGroup?.shelves.length ? (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {selectedCategoryGroup.shelves.map((group) => (
+                <CollectionCover
+                  key={group.name}
+                  kind="shelf"
+                  title={group.name}
+                  subtitle={selectedCategory}
+                  locale={locale}
+                  stats={[{ label: navT.books, value: group.bookCount }]}
+                  onClick={() => openShelf(selectedCategory, group.name)}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyState title={t.emptyTitle} text={t.emptyText} />
+          )}
+        </section>
+      );
+    }
+
+    return (
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <SectionIntro title={selectedShelf} text={selectedCategory} />
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className="secondary-button" onClick={() => setSelectedShelf("")}>
+              {navT.backToShelves}
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => {
+                setSelectedCategory("");
+                setSelectedShelf("");
+              }}
+            >
+              {navT.backToCategories}
+            </button>
+          </div>
+        </div>
+        {renderBookGrid(selectedShelfGroup?.books ?? [])}
+      </section>
+    );
+  }
+
+  function renderAuthorsView() {
+    if (!selectedAuthor) {
+      return (
+        <section className="space-y-4">
+          <SectionIntro title={navT.allAuthors} text={locale === "ar" ? "افتح مؤلفا لترى كل كتبه." : "Open an author to see every linked book."} />
+          {authorGroups.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {authorGroups.map((group) => (
+                <CollectionCover
+                  key={group.name}
+                  kind="author"
+                  title={group.name}
+                  subtitle={navT.author}
+                  locale={locale}
+                  stats={[{ label: navT.books, value: group.bookCount }]}
+                  onClick={() => openAuthor(group.name)}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyState title={t.emptyTitle} text={t.emptyText} />
+          )}
+        </section>
+      );
+    }
+
+    return (
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <SectionIntro title={selectedAuthor} text={navT.author} />
+          <button type="button" className="secondary-button" onClick={() => setSelectedAuthor("")}>
+            {navT.backToAuthors}
+          </button>
+        </div>
+        {renderBookGrid(selectedAuthorGroup?.books ?? [])}
+      </section>
+    );
+  }
+
+  function renderBooksView() {
+    return (
+      <section className="space-y-4">
+        {renderBookFilters()}
+        {state === "loading" ? (
+          <div className="rounded-lg border border-stone-200 bg-white p-8 text-center text-stone-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+            {t.loading}
+          </div>
+        ) : null}
+        {state === "ready" ? (
+          filteredBooks.length === 0 ? (
+            <EmptyState title={t.emptyTitle} text={t.emptyText} />
+          ) : (
+            renderBookGrid(filteredBooks)
+          )
+        ) : null}
+      </section>
+    );
+  }
+
+  function renderBookFilters() {
+    return (
+      <div className="grid gap-3 rounded-lg border border-stone-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900 md:grid-cols-[1fr_180px_180px_160px_auto]">
+        <label className="relative block">
+          <Search size={17} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400" />
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t.searchPlaceholder} className="input pr-10" />
+        </label>
+        <select value={category} onChange={(event) => setCategory(event.target.value)} className="input">
+          <option value="">{t.allCategories}</option>
+          {categories.map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}
+        </select>
+        <select value={shelf} onChange={(event) => setShelf(event.target.value)} className="input">
+          <option value="">{t.allShelves}</option>
+          {shelves.map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}
+        </select>
+        <select value={status} onChange={(event) => setStatus(event.target.value as ReadingStatus | "ALL")} className="input">
+          <option value="ALL">{t.allStatuses}</option>
+          <option value="UNREAD">{t.unread}</option>
+          <option value="READING">{t.reading}</option>
+          <option value="READ">{t.read}</option>
+        </select>
+        <button
+          type="button"
+          title={t.clearFilters}
+          onClick={() => {
+            setSearch("");
+            setCategory("");
+            setShelf("");
+            setStatus("ALL");
+          }}
+          className="icon-button"
+        >
+          <Filter size={18} />
+        </button>
+      </div>
+    );
+  }
+
+  function renderBookGrid(bookList: LibraryBook[]) {
+    if (bookList.length === 0) return <EmptyState title={t.emptyTitle} text={t.emptyText} />;
+
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {bookList.map((book) => (
+          <BookCoverTile key={book.id} book={book} locale={locale} onOpen={openBook} />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <main
       dir={localeLabels[locale].dir}
@@ -718,69 +1082,7 @@ export function LibraryApp() {
         ) : null}
 
         <section className="grid gap-5 lg:grid-cols-[1fr_380px]">
-          <div className="space-y-4">
-            <div className="grid gap-3 rounded-lg border border-stone-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900 md:grid-cols-[1fr_180px_180px_160px_auto]">
-              <label className="relative block">
-                <Search size={17} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400" />
-                <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t.searchPlaceholder} className="input pr-10" />
-              </label>
-              <select value={category} onChange={(event) => setCategory(event.target.value)} className="input">
-                <option value="">{t.allCategories}</option>
-                {categories.map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}
-              </select>
-              <select value={shelf} onChange={(event) => setShelf(event.target.value)} className="input">
-                <option value="">{t.allShelves}</option>
-                {shelves.map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}
-              </select>
-              <select value={status} onChange={(event) => setStatus(event.target.value as ReadingStatus | "ALL")} className="input">
-                <option value="ALL">{t.allStatuses}</option>
-                <option value="UNREAD">{t.unread}</option>
-                <option value="READING">{t.reading}</option>
-                <option value="READ">{t.read}</option>
-              </select>
-              <button
-                type="button"
-                title={t.clearFilters}
-                onClick={() => {
-                  setSearch("");
-                  setCategory("");
-                  setShelf("");
-                  setStatus("ALL");
-                }}
-                className="icon-button"
-              >
-                <Filter size={18} />
-              </button>
-            </div>
-
-            {state === "loading" ? (
-              <div className="rounded-lg border border-stone-200 bg-white p-8 text-center text-stone-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
-                {t.loading}
-              </div>
-            ) : null}
-
-            {state === "ready" && filteredBooks.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-stone-300 bg-white p-8 text-center dark:border-slate-700 dark:bg-slate-900">
-                <p className="font-semibold">{t.emptyTitle}</p>
-                <p className="mt-2 text-sm text-stone-600 dark:text-slate-400">{t.emptyText}</p>
-              </div>
-            ) : null}
-
-            <div className="grid gap-3 xl:grid-cols-2">
-              {filteredBooks.map((book) => (
-                <BookCard
-                  key={book.id}
-                  book={book}
-                  locale={locale}
-                  onEdit={(selected) => {
-                    setEditing(selected);
-                    setShowForm(true);
-                  }}
-                  onDelete={(selected) => void deleteBook(selected)}
-                />
-              ))}
-            </div>
-          </div>
+          {renderMainContent()}
 
           <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start">
             {showForm ? (
@@ -859,6 +1161,51 @@ function Stat({ label, value }: { label: string; value: number }) {
     <div className="rounded-lg border border-stone-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
       <p className="text-xs text-stone-500 dark:text-slate-400">{label}</p>
       <p className="mt-1 text-2xl font-bold">{value}</p>
+    </div>
+  );
+}
+
+function TabButton({
+  active,
+  icon,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex h-11 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold transition ${
+        active
+          ? "bg-teal-700 text-white shadow-sm"
+          : "text-stone-700 hover:bg-stone-100 dark:text-slate-200 dark:hover:bg-slate-800"
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+function SectionIntro({ title, text }: { title: string; text: string }) {
+  return (
+    <div>
+      <h2 className="text-2xl font-bold text-stone-950 dark:text-slate-50">{title}</h2>
+      <p className="mt-1 text-sm text-stone-600 dark:text-slate-400">{text}</p>
+    </div>
+  );
+}
+
+function EmptyState({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="rounded-lg border border-dashed border-stone-300 bg-white p-8 text-center dark:border-slate-700 dark:bg-slate-900">
+      <p className="font-semibold">{title}</p>
+      <p className="mt-2 text-sm text-stone-600 dark:text-slate-400">{text}</p>
     </div>
   );
 }
