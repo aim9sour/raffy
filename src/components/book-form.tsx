@@ -1,7 +1,7 @@
 "use client";
 
 import { Save, X } from "lucide-react";
-import { useId, useState } from "react";
+import { useState } from "react";
 import type { BookInput, LibraryBook, ReadingStatus } from "@/lib/book-schema";
 import type { Locale } from "@/lib/i18n";
 import type { EntityView } from "./entity-manager";
@@ -76,14 +76,17 @@ const copy = {
 export function BookForm({ book, entities, locale, onClose, onSave }: Props) {
   const [form, setForm] = useState<BookInput>(() => getInitialForm(book));
   const [saving, setSaving] = useState(false);
-  const authorListId = useId();
-  const categoryListId = useId();
-  const shelfListId = useId();
   const t = copy[locale];
 
   const authors = entities.filter((entity) => entity.type === "AUTHOR");
   const categories = entities.filter((entity) => entity.type === "CATEGORY");
   const shelves = entities.filter((entity) => entity.type === "SHELF");
+  const authorOptions = ensureOption(authors.map((author) => author.name), form.author);
+  const categoryOptions = ensureOption(
+    ["Uncategorized", ...categories.map((category) => category.name)],
+    form.category,
+  );
+  const shelfOptions = ensureOption(["General", ...shelves.map((shelf) => shelf.name)], form.shelf);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -125,16 +128,18 @@ export function BookForm({ book, entities, locale, onClose, onSave }: Props) {
       </Field>
 
       <Field label={t.author}>
-        <input
+        <select
           value={form.author}
           onChange={(event) => setForm({ ...form, author: event.target.value })}
           className="input"
-          list={authorListId}
-          placeholder={t.noAuthor}
-        />
-        <datalist id={authorListId}>
-          {authors.map((author) => <option key={author.id} value={author.name} />)}
-        </datalist>
+        >
+          <option value="">{t.noAuthor}</option>
+          {authorOptions.map((author) => (
+            <option key={author} value={author}>
+              {author}
+            </option>
+          ))}
+        </select>
       </Field>
 
       <Field label={t.coverUrl}>
@@ -149,30 +154,30 @@ export function BookForm({ book, entities, locale, onClose, onSave }: Props) {
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label={t.category}>
-          <input
+          <select
             value={form.category}
             onChange={(event) => setForm({ ...form, category: event.target.value })}
             className="input"
-            list={categoryListId}
-            placeholder={t.uncategorized}
-          />
-          <datalist id={categoryListId}>
-            <option value="Uncategorized" />
-            {categories.map((category) => <option key={category.id} value={category.name} />)}
-          </datalist>
+          >
+            {categoryOptions.map((category) => (
+              <option key={category} value={category}>
+                {category === "Uncategorized" ? t.uncategorized : category}
+              </option>
+            ))}
+          </select>
         </Field>
         <Field label={t.shelf}>
-          <input
+          <select
             value={form.shelf}
             onChange={(event) => setForm({ ...form, shelf: event.target.value })}
             className="input"
-            list={shelfListId}
-            placeholder={t.general}
-          />
-          <datalist id={shelfListId}>
-            <option value="General" />
-            {shelves.map((shelf) => <option key={shelf.id} value={shelf.name} />)}
-          </datalist>
+          >
+            {shelfOptions.map((shelf) => (
+              <option key={shelf} value={shelf}>
+                {shelf === "General" ? t.general : shelf}
+              </option>
+            ))}
+          </select>
         </Field>
       </div>
 
@@ -247,6 +252,11 @@ function getInitialForm(book: LibraryBook | null): BookInput {
         notes: book.notes,
       }
     : emptyBook;
+}
+
+function ensureOption(options: string[], value: string) {
+  const normalized = Array.from(new Set(options.filter(Boolean)));
+  return value && !normalized.includes(value) ? [value, ...normalized] : normalized;
 }
 
 function Field({
