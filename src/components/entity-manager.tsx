@@ -12,6 +12,11 @@ export type EntityView = {
   name: string;
 };
 
+export type EntityUpdateInput = {
+  type: EntityType;
+  name: string;
+};
+
 const copy = {
   ar: {
     title: "إدارة المؤلفين والفئات والرفوف",
@@ -47,7 +52,7 @@ type Props = {
   entities: EntityView[];
   locale: Locale;
   onCreate: (type: EntityType, name: string) => Promise<void>;
-  onUpdate: (id: string, name: string) => Promise<void>;
+  onUpdate: (id: string, input: EntityUpdateInput, previous: EntityView) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 };
 
@@ -55,6 +60,7 @@ export function EntityManager({ entities, locale, onCreate, onUpdate, onDelete }
   const [type, setType] = useState<EntityType>("AUTHOR");
   const [name, setName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingType, setEditingType] = useState<EntityType>("AUTHOR");
   const [editingName, setEditingName] = useState("");
   const [busy, setBusy] = useState(false);
   const t = copy[locale];
@@ -71,12 +77,13 @@ export function EntityManager({ entities, locale, onCreate, onUpdate, onDelete }
     }
   }
 
-  async function saveEdit(id: string) {
+  async function saveEdit(entity: EntityView) {
     if (!editingName.trim()) return;
     setBusy(true);
     try {
-      await onUpdate(id, editingName);
+      await onUpdate(entity.id, { type: editingType, name: editingName }, entity);
       setEditingId(null);
+      setEditingType("AUTHOR");
       setEditingName("");
     } finally {
       setBusy(false);
@@ -129,6 +136,15 @@ export function EntityManager({ entities, locale, onCreate, onUpdate, onDelete }
                   >
                     {editingId === entity.id ? (
                       <>
+                        <select
+                          value={editingType}
+                          onChange={(event) => setEditingType(event.target.value as EntityType)}
+                          className="h-7 rounded border border-stone-300 bg-white px-2 text-sm text-stone-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+                        >
+                          <option value="AUTHOR">{t.labels.AUTHOR.singular}</option>
+                          <option value="CATEGORY">{t.labels.CATEGORY.singular}</option>
+                          <option value="SHELF">{t.labels.SHELF.singular}</option>
+                        </select>
                         <input
                           value={editingName}
                           onChange={(event) => setEditingName(event.target.value)}
@@ -136,7 +152,7 @@ export function EntityManager({ entities, locale, onCreate, onUpdate, onDelete }
                         />
                         <button
                           type="button"
-                          onClick={() => void saveEdit(entity.id)}
+                          onClick={() => void saveEdit(entity)}
                           className="text-teal-700 dark:text-teal-300"
                         >
                           {t.save}
@@ -157,6 +173,7 @@ export function EntityManager({ entities, locale, onCreate, onUpdate, onDelete }
                           title={t.edit}
                           onClick={() => {
                             setEditingId(entity.id);
+                            setEditingType(entity.type);
                             setEditingName(entity.name);
                           }}
                         >

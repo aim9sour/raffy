@@ -69,16 +69,27 @@ export async function importEntities(userId: string, inputs: EntityInput[]) {
 export async function updateEntity(userId: string, id: string, input: unknown) {
   const data = entityInputSchema.partial({ type: true }).parse(input);
   const db = getDb();
-  const result = await db.libraryEntity.updateMany({
-    where: { id, userId },
-    data,
+  const entity = await db.$transaction(async (tx) => {
+    const previous = await tx.libraryEntity.findFirst({ where: { id, userId } });
+    if (!previous) throw new EntityNotFoundError();
+
+    const updated = await tx.libraryEntity.update({
+      where: { id },
+      data,
+    });
+
+    if (data.name && data.name !== previous.name && (data.type ?? previous.type) === previous.type) {
+      const field =
+        previous.type === "AUTHOR" ? "author" : previous.type === "CATEGORY" ? "category" : "shelf";
+      await tx.book.updateMany({
+        where: { userId, [field]: previous.name },
+        data: { [field]: data.name },
+      });
+    }
+
+    return updated;
   });
 
-  if (result.count === 0) {
-    throw new EntityNotFoundError();
-  }
-
-  const entity = await db.libraryEntity.findFirstOrThrow({ where: { id, userId } });
   return serializeEntity(entity);
 }
 

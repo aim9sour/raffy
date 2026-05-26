@@ -35,7 +35,12 @@ import {
 import { getBrowserLocale, localeLabels, type Locale } from "@/lib/i18n";
 import { BookCard } from "./book-card";
 import { BookForm } from "./book-form";
-import { EntityManager, type EntityType, type EntityView } from "./entity-manager";
+import {
+  EntityManager,
+  type EntityType,
+  type EntityUpdateInput,
+  type EntityView,
+} from "./entity-manager";
 import { LanguageToggle } from "./language-toggle";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -386,20 +391,21 @@ export function LibraryApp() {
     }
   }
 
-  async function updateEntity(id: string, name: string) {
+  async function updateEntity(id: string, input: EntityUpdateInput, previous: EntityView) {
     const activeCopy = copy[getBrowserLocale()];
     if (isLocalId(id)) {
       replaceOfflineQueue(
         readOfflineQueue().map((operation) =>
           operation.type === "create-entity" && operation.localId === id
-            ? { ...operation, payload: { ...operation.payload, name } }
+            ? { ...operation, payload: input }
             : operation,
         ),
       );
       refreshPendingCount();
       updateEntities((current) =>
-        current.map((entity) => (entity.id === id ? { ...entity, name } : entity)).sort(sortEntities),
+        current.map((entity) => (entity.id === id ? { ...entity, ...input } : entity)).sort(sortEntities),
       );
+      updateBooksForEntityChange(previous, input);
       setSyncMessage(activeCopy.messages.savedLocal);
       return;
     }
@@ -408,13 +414,14 @@ export function LibraryApp() {
       const response = await fetch(`/api/entities/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify(input),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? activeCopy.errors.updateEntity);
       updateEntities((current) =>
         current.map((entity) => (entity.id === id ? payload.entity : entity)).sort(sortEntities),
       );
+      updateBooksForEntityChange(previous, payload.entity);
     } catch (updateError) {
       if (!shouldQueueOffline(updateError)) {
         setError(updateError instanceof Error ? updateError.message : activeCopy.errors.updateEntity);
@@ -425,12 +432,13 @@ export function LibraryApp() {
         id: createLocalId("queue"),
         type: "update-entity",
         remoteId: id,
-        payload: { name },
+        payload: input,
       });
       refreshPendingCount();
       updateEntities((current) =>
-        current.map((entity) => (entity.id === id ? { ...entity, name } : entity)).sort(sortEntities),
+        current.map((entity) => (entity.id === id ? { ...entity, ...input } : entity)).sort(sortEntities),
       );
+      updateBooksForEntityChange(previous, input);
       setSyncMessage(activeCopy.messages.savedLocal);
     }
   }
@@ -636,6 +644,19 @@ export function LibraryApp() {
 
   function refreshPendingCount() {
     setPendingCount(readOfflineQueue().length);
+  }
+
+  function updateBooksForEntityChange(previous: EntityView, next: EntityUpdateInput) {
+    if (previous.type !== next.type || previous.name === next.name) return;
+    const field =
+      previous.type === "AUTHOR" ? "author" : previous.type === "CATEGORY" ? "category" : "shelf";
+    updateBooks((current) =>
+      current.map((book) =>
+        book[field] === previous.name
+          ? { ...book, [field]: next.name, updatedAt: new Date().toISOString() }
+          : book,
+      ),
+    );
   }
 
   return (

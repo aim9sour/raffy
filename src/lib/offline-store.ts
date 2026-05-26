@@ -1,5 +1,5 @@
 import type { BookInput, LibraryBook } from "@/lib/book-schema";
-import type { EntityType, EntityView } from "@/components/entity-manager";
+import type { EntityType, EntityUpdateInput, EntityView } from "@/components/entity-manager";
 
 export type LibrarySnapshot = {
   books: LibraryBook[];
@@ -16,7 +16,7 @@ export type OfflineOperation =
       localId: string;
       payload: { type: EntityType; name: string };
     }
-  | { id: string; type: "update-entity"; remoteId: string; payload: { name: string } }
+  | { id: string; type: "update-entity"; remoteId: string; payload: EntityUpdateInput }
   | { id: string; type: "delete-entity"; remoteId: string };
 
 const SNAPSHOT_KEY = "shelfwise.library.snapshot";

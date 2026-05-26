@@ -1,7 +1,7 @@
 "use client";
 
 import { Save, X } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { BookInput, LibraryBook, ReadingStatus } from "@/lib/book-schema";
 import type { Locale } from "@/lib/i18n";
 import type { EntityView } from "./entity-manager";
@@ -76,6 +76,9 @@ const copy = {
 export function BookForm({ book, entities, locale, onClose, onSave }: Props) {
   const [form, setForm] = useState<BookInput>(() => getInitialForm(book));
   const [saving, setSaving] = useState(false);
+  const authorListId = useId();
+  const categoryListId = useId();
+  const shelfListId = useId();
   const t = copy[locale];
 
   const authors = entities.filter((entity) => entity.type === "AUTHOR");
@@ -122,18 +125,16 @@ export function BookForm({ book, entities, locale, onClose, onSave }: Props) {
       </Field>
 
       <Field label={t.author}>
-        <select
+        <input
           value={form.author}
           onChange={(event) => setForm({ ...form, author: event.target.value })}
           className="input"
-        >
-          <option value="">{t.noAuthor}</option>
-          {authors.map((author) => (
-            <option key={author.id} value={author.name}>
-              {author.name}
-            </option>
-          ))}
-        </select>
+          list={authorListId}
+          placeholder={t.noAuthor}
+        />
+        <datalist id={authorListId}>
+          {authors.map((author) => <option key={author.id} value={author.name} />)}
+        </datalist>
       </Field>
 
       <Field label={t.coverUrl}>
@@ -148,32 +149,30 @@ export function BookForm({ book, entities, locale, onClose, onSave }: Props) {
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label={t.category}>
-          <select
+          <input
             value={form.category}
             onChange={(event) => setForm({ ...form, category: event.target.value })}
             className="input"
-          >
-            <option value="Uncategorized">{t.uncategorized}</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.name}>
-                {category.name}
-              </option>
-            ))}
-          </select>
+            list={categoryListId}
+            placeholder={t.uncategorized}
+          />
+          <datalist id={categoryListId}>
+            <option value="Uncategorized" />
+            {categories.map((category) => <option key={category.id} value={category.name} />)}
+          </datalist>
         </Field>
         <Field label={t.shelf}>
-          <select
+          <input
             value={form.shelf}
             onChange={(event) => setForm({ ...form, shelf: event.target.value })}
             className="input"
-          >
-            <option value="General">{t.general}</option>
-            {shelves.map((shelf) => (
-              <option key={shelf.id} value={shelf.name}>
-                {shelf.name}
-              </option>
-            ))}
-          </select>
+            list={shelfListId}
+            placeholder={t.general}
+          />
+          <datalist id={shelfListId}>
+            <option value="General" />
+            {shelves.map((shelf) => <option key={shelf.id} value={shelf.name} />)}
+          </datalist>
         </Field>
       </div>
 
