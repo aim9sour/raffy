@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAuthorGroups, buildCategoryGroups } from "./book-navigation";
+import { buildAuthorGroups, buildCategoryGroups, getShelfOptionsForCategory } from "./book-navigation";
 import type { LibraryBook } from "./book-schema";
 
 const books: LibraryBook[] = [
@@ -77,7 +77,7 @@ describe("book navigation grouping", () => {
   it("keeps created empty categories, shelves and authors visible", () => {
     const categoryGroups = buildCategoryGroups(books, {
       categories: ["Archive"],
-      shelves: ["Wishlist"],
+      shelves: [{ name: "Wishlist", category: "Archive" }],
     });
     const authorGroups = buildAuthorGroups(books, ["Naguib Mahfouz"]);
 
@@ -85,9 +85,23 @@ describe("book navigation grouping", () => {
       bookCount: 0,
       shelfCount: 1,
     });
-    expect(categoryGroups.find((group) => group.name === "Novel")?.shelves.map((shelf) => shelf.name)).toContain("Wishlist");
+    expect(categoryGroups.find((group) => group.name === "Archive")?.shelves.map((shelf) => shelf.name)).toContain("Wishlist");
+    expect(categoryGroups.find((group) => group.name === "Novel")?.shelves.map((shelf) => shelf.name)).not.toContain("Wishlist");
     expect(authorGroups.find((group) => group.name === "Naguib Mahfouz")).toMatchObject({
       bookCount: 0,
     });
+  });
+
+  it("returns only shelf options that belong to the selected category", () => {
+    const shelves = [
+      { name: "Archive", category: "Novel" },
+      { name: "Morning", category: "Self Development" },
+    ];
+
+    expect(getShelfOptionsForCategory(books, shelves, "Novel")).toEqual(["Archive", "Fiction"]);
+    expect(getShelfOptionsForCategory(books, shelves, "Self Development")).toEqual([
+      "Focus",
+      "Morning",
+    ]);
   });
 });

@@ -22,12 +22,12 @@ const sampleBook = {
 
 describe("book import/export", () => {
   it("builds a portable export payload with metadata, books and entities", () => {
-    const payload = buildExportPayload([sampleBook], [{ type: "AUTHOR", name: "Andrew Hunt" }]);
+    const payload = buildExportPayload([sampleBook], [{ type: "AUTHOR", name: "Andrew Hunt", category: null }]);
 
     expect(payload.app).toBe("Raffy");
     expect(payload.version).toBe(2);
     expect(payload.books).toHaveLength(1);
-    expect(payload.entities).toEqual([{ type: "AUTHOR", name: "Andrew Hunt" }]);
+    expect(payload.entities).toEqual([{ type: "AUTHOR", name: "Andrew Hunt", category: null }]);
     expect(payload.books[0].title).toBe("The Pragmatic Programmer");
   });
 
@@ -68,6 +68,15 @@ describe("book import/export", () => {
         books: [],
         entities: [{ type: "CATEGORY", name: "  روايات  " }],
       }),
-    ).toEqual([{ type: "CATEGORY", name: "روايات" }]);
+    ).toEqual([{ type: "CATEGORY", name: "روايات", category: null }]);
+  });
+
+  it("infers categories for imported legacy shelf entities", () => {
+    expect(
+      parseImportedEntities({
+        books: [{ title: "Dune", category: "Novel", shelf: "Classics" }],
+        entities: [{ type: "SHELF", name: "Classics" }],
+      }),
+    ).toEqual([{ type: "SHELF", name: "Classics", category: "Novel" }]);
   });
 });

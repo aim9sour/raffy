@@ -6,16 +6,27 @@ describe("library entities", () => {
     expect(entityInputSchema.parse({ type: "AUTHOR", name: "  Naguib Mahfouz  " })).toEqual({
       type: "AUTHOR",
       name: "Naguib Mahfouz",
+      category: null,
     });
 
     expect(() => entityInputSchema.parse({ type: "CATEGORY", name: "" })).toThrow();
   });
 
+  it("requires shelves to belong to a category", () => {
+    expect(entityInputSchema.parse({ type: "SHELF", name: "Favorites", category: "Novel" })).toEqual({
+      type: "SHELF",
+      name: "Favorites",
+      category: "Novel",
+    });
+
+    expect(() => entityInputSchema.parse({ type: "SHELF", name: "Favorites" })).toThrow();
+  });
+
   it("groups authors, categories, and shelves for form options", () => {
     const grouped = groupEntitiesByType([
-      { id: "1", userId: "u1", type: "AUTHOR", name: "Naguib Mahfouz", createdAt: new Date(), updatedAt: new Date() },
-      { id: "2", userId: "u1", type: "CATEGORY", name: "Novel", createdAt: new Date(), updatedAt: new Date() },
-      { id: "3", userId: "u1", type: "SHELF", name: "Arabic", createdAt: new Date(), updatedAt: new Date() },
+      { id: "1", userId: "u1", type: "AUTHOR", name: "Naguib Mahfouz", category: null, createdAt: new Date(), updatedAt: new Date() },
+      { id: "2", userId: "u1", type: "CATEGORY", name: "Novel", category: null, createdAt: new Date(), updatedAt: new Date() },
+      { id: "3", userId: "u1", type: "SHELF", name: "Arabic", category: "Novel", createdAt: new Date(), updatedAt: new Date() },
     ]);
 
     expect(grouped.authors.map((item) => item.name)).toEqual(["Naguib Mahfouz"]);

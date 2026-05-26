@@ -46,9 +46,10 @@ model LibraryEntity {
   userId    String
   type      EntityType
   name      String
+  category  String?
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
-  @@unique([userId, type, name])
   @@index([userId, type])
+  @@index([userId, type, name, category])
 }

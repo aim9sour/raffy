@@ -3,6 +3,7 @@
 import { Save, X } from "lucide-react";
 import { useState } from "react";
 import type { BookInput, LibraryBook, ReadingStatus } from "@/lib/book-schema";
+import { getShelfOptionsForCategory } from "@/lib/book-navigation";
 import type { Locale } from "@/lib/i18n";
 import type { EntityView } from "./entity-manager";
 
@@ -10,8 +11,8 @@ const emptyBook: BookInput = {
   title: "",
   author: "",
   coverUrl: "",
-  category: "Uncategorized",
-  shelf: "General",
+  category: "",
+  shelf: "",
   acquiredAt: null,
   status: "UNREAD",
   rating: null,
@@ -21,6 +22,7 @@ const emptyBook: BookInput = {
 type Props = {
   book: LibraryBook | null;
   entities: EntityView[];
+  books: LibraryBook[];
   locale: Locale;
   onClose: () => void;
   onSave: (book: BookInput, id?: string) => Promise<void>;
@@ -48,6 +50,9 @@ const copy = {
     notes: "ملاحظات",
     saving: "جاري الحفظ",
     save: "حفظ",
+    createEntitiesFirst: "أنشئ الفئات والرفوف والمؤلفين من إدارة العناصر أولا.",
+    chooseCategoryFirst: "اختر الفئة أولا",
+    noShelves: "لا توجد رفوف داخل هذه الفئة",
   },
   en: {
     add: "Add book",
@@ -70,10 +75,13 @@ const copy = {
     notes: "Notes",
     saving: "Saving",
     save: "Save",
+    createEntitiesFirst: "Create categories, shelves and authors from item management first.",
+    chooseCategoryFirst: "Choose a category first",
+    noShelves: "No shelves inside this category",
   },
 };
 
-export function BookForm({ book, entities, locale, onClose, onSave }: Props) {
+export function BookForm({ book, entities, books, locale, onClose, onSave }: Props) {
   const [form, setForm] = useState<BookInput>(() => getInitialForm(book));
   const [saving, setSaving] = useState(false);
   const t = copy[locale];
@@ -82,14 +90,18 @@ export function BookForm({ book, entities, locale, onClose, onSave }: Props) {
   const categories = entities.filter((entity) => entity.type === "CATEGORY");
   const shelves = entities.filter((entity) => entity.type === "SHELF");
   const authorOptions = ensureOption(authors.map((author) => author.name), form.author);
-  const categoryOptions = ensureOption(
-    ["Uncategorized", ...categories.map((category) => category.name)],
+  const categoryOptions = ensureOption(categories.map((category) => category.name), form.category);
+  const shelfOptions = getShelfOptionsForCategory(
+    books,
+    shelves.map((item) => ({ name: item.name, category: item.category })),
     form.category,
+    form.shelf,
   );
-  const shelfOptions = ensureOption(["General", ...shelves.map((shelf) => shelf.name)], form.shelf);
+  const canSave = Boolean(form.title.trim()) && Boolean(form.category) && Boolean(form.shelf);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!canSave) return;
     setSaving(true);
     try {
       await onSave(form, book?.id);
@@ -155,10 +167,20 @@ export function BookForm({ book, entities, locale, onClose, onSave }: Props) {
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label={t.category}>
           <select
+            required
             value={form.category}
-            onChange={(event) => setForm({ ...form, category: event.target.value })}
+            onChange={(event) => {
+              const nextCategory = event.target.value;
+              const nextShelves = getShelfOptionsForCategory(
+                books,
+                shelves.map((item) => ({ name: item.name, category: item.category })),
+                nextCategory,
+              );
+              setForm({ ...form, category: nextCategory, shelf: nextShelves[0] ?? "" });
+            }}
             className="input"
           >
+            <option value="">{categories.length === 0 ? t.createEntitiesFirst : t.category}</option>
             {categoryOptions.map((category) => (
               <option key={category} value={category}>
                 {category === "Uncategorized" ? t.uncategorized : category}
@@ -168,10 +190,15 @@ export function BookForm({ book, entities, locale, onClose, onSave }: Props) {
         </Field>
         <Field label={t.shelf}>
           <select
+            required
             value={form.shelf}
             onChange={(event) => setForm({ ...form, shelf: event.target.value })}
             className="input"
+            disabled={!form.category || shelfOptions.length === 0}
           >
+            <option value="">
+              {!form.category ? t.chooseCategoryFirst : t.noShelves}
+            </option>
             {shelfOptions.map((shelf) => (
               <option key={shelf} value={shelf}>
                 {shelf === "General" ? t.general : shelf}
@@ -228,7 +255,7 @@ export function BookForm({ book, entities, locale, onClose, onSave }: Props) {
 
       <button
         type="submit"
-        disabled={saving}
+        disabled={saving || !canSave}
         className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-teal-700 px-4 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <Save size={17} />

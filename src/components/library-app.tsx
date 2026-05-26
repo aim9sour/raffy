@@ -40,7 +40,7 @@ import { BookDetailPanel, bookToInput } from "./book-detail-panel";
 import { BookForm } from "./book-form";
 import {
   EntityManager,
-  type EntityType,
+  type EntityCreateInput,
   type EntityUpdateInput,
   type EntityView,
 } from "./entity-manager";
@@ -288,7 +288,7 @@ export function LibraryApp() {
     () =>
       buildCategoryGroups(books, {
         categories: categories.map((item) => item.name),
-        shelves: shelves.map((item) => item.name),
+        shelves: shelves.map((item) => ({ name: item.name, category: item.category })),
       }),
     [books, categories, shelves],
   );
@@ -433,13 +433,13 @@ export function LibraryApp() {
     }
   }
 
-  async function createEntity(type: EntityType, name: string) {
+  async function createEntity(input: EntityCreateInput) {
     const activeCopy = copy[getBrowserLocale()];
     try {
       const response = await fetch("/api/entities", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, name }),
+        body: JSON.stringify(input),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? activeCopy.errors.createEntity);
@@ -450,12 +450,12 @@ export function LibraryApp() {
         return;
       }
 
-      const localEntity = { id: createLocalId(), type, name };
+      const localEntity = { id: createLocalId(), ...input };
       enqueueOfflineOperation({
         id: createLocalId("queue"),
         type: "create-entity",
         localId: localEntity.id,
-        payload: { type, name },
+        payload: input,
       });
       refreshPendingCount();
       updateEntities((current) => [...current, localEntity].sort(sortEntities));
@@ -664,7 +664,7 @@ export function LibraryApp() {
           id: createLocalId("queue"),
           type: "create-entity",
           localId: entity.id,
-          payload: { type: entity.type, name: entity.name },
+          payload: { type: entity.type, name: entity.name, category: entity.category },
         });
       }
       for (const book of localBooks) {
@@ -719,13 +719,47 @@ export function LibraryApp() {
   }
 
   function updateBooksForEntityChange(previous: EntityView, next: EntityUpdateInput) {
-    if (previous.type !== next.type || previous.name === next.name) return;
-    const field =
-      previous.type === "AUTHOR" ? "author" : previous.type === "CATEGORY" ? "category" : "shelf";
+    if (previous.type !== next.type) return;
+    const now = new Date().toISOString();
+
+    if (previous.type === "CATEGORY" && previous.name !== next.name) {
+      updateEntities((current) =>
+        current
+          .map((entity) =>
+            entity.type === "SHELF" && entity.category === previous.name
+              ? { ...entity, category: next.name }
+              : entity,
+          )
+          .sort(sortEntities),
+      );
+      updateBooks((current) =>
+        current.map((book) =>
+          book.category === previous.name ? { ...book, category: next.name, updatedAt: now } : book,
+        ),
+      );
+      return;
+    }
+
+    if (previous.type === "AUTHOR" && previous.name !== next.name) {
+      updateBooks((current) =>
+        current.map((book) =>
+          book.author === previous.name ? { ...book, author: next.name, updatedAt: now } : book,
+        ),
+      );
+      return;
+    }
+
+    if (previous.type !== "SHELF") return;
+
     updateBooks((current) =>
       current.map((book) =>
-        book[field] === previous.name
-          ? { ...book, [field]: next.name, updatedAt: new Date().toISOString() }
+        book.category === previous.category && book.shelf === previous.name
+          ? {
+              ...book,
+              category: next.category ?? previous.category ?? book.category,
+              shelf: next.name,
+              updatedAt: now,
+            }
           : book,
       ),
     );
@@ -1089,6 +1123,7 @@ export function LibraryApp() {
               <BookForm
                 key={editing?.id ?? "new-book"}
                 book={editing}
+                books={books}
                 entities={entities}
                 locale={locale}
                 onClose={closeBookForm}
@@ -1153,7 +1188,11 @@ function shouldQueueOffline(error: unknown) {
 }
 
 function sortEntities(a: EntityView, b: EntityView) {
-  return a.type.localeCompare(b.type) || a.name.localeCompare(b.name);
+  return (
+    a.type.localeCompare(b.type) ||
+    (a.category ?? "").localeCompare(b.category ?? "") ||
+    a.name.localeCompare(b.name)
+  );
 }
 
 function Stat({ label, value }: { label: string; value: number }) {

@@ -10,11 +10,19 @@ export type EntityView = {
   id: string;
   type: EntityType;
   name: string;
+  category: string | null;
+};
+
+export type EntityCreateInput = {
+  type: EntityType;
+  name: string;
+  category: string | null;
 };
 
 export type EntityUpdateInput = {
   type: EntityType;
   name: string;
+  category: string | null;
 };
 
 const copy = {
@@ -26,6 +34,10 @@ const copy = {
     edit: "تعديل",
     delete: "حذف",
     empty: "لا توجد عناصر بعد.",
+    name: "اسم",
+    categoryForShelf: "الفئة الخاصة بالرف",
+    chooseCategory: "اختر الفئة",
+    createCategoryFirst: "أنشئ فئة أولا",
     labels: {
       AUTHOR: { singular: "مؤلف", plural: "المؤلفون" },
       CATEGORY: { singular: "فئة", plural: "الفئات" },
@@ -40,6 +52,10 @@ const copy = {
     edit: "Edit",
     delete: "Delete",
     empty: "No items yet.",
+    name: "Name",
+    categoryForShelf: "Shelf category",
+    chooseCategory: "Choose category",
+    createCategoryFirst: "Create a category first",
     labels: {
       AUTHOR: { singular: "Author", plural: "Authors" },
       CATEGORY: { singular: "Category", plural: "Categories" },
@@ -51,7 +67,7 @@ const copy = {
 type Props = {
   entities: EntityView[];
   locale: Locale;
-  onCreate: (type: EntityType, name: string) => Promise<void>;
+  onCreate: (input: EntityCreateInput) => Promise<void>;
   onUpdate: (id: string, input: EntityUpdateInput, previous: EntityView) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 };
@@ -59,19 +75,24 @@ type Props = {
 export function EntityManager({ entities, locale, onCreate, onUpdate, onDelete }: Props) {
   const [type, setType] = useState<EntityType>("AUTHOR");
   const [name, setName] = useState("");
+  const [category, setCategory] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingType, setEditingType] = useState<EntityType>("AUTHOR");
   const [editingName, setEditingName] = useState("");
+  const [editingCategory, setEditingCategory] = useState("");
   const [busy, setBusy] = useState(false);
   const t = copy[locale];
+  const categories = entities.filter((entity) => entity.type === "CATEGORY");
+  const canCreate = Boolean(name.trim()) && (type !== "SHELF" || Boolean(category));
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!name.trim()) return;
+    if (!canCreate) return;
     setBusy(true);
     try {
-      await onCreate(type, name);
+      await onCreate({ type, name, category: type === "SHELF" ? category : null });
       setName("");
+      setCategory("");
     } finally {
       setBusy(false);
     }
@@ -79,12 +100,22 @@ export function EntityManager({ entities, locale, onCreate, onUpdate, onDelete }
 
   async function saveEdit(entity: EntityView) {
     if (!editingName.trim()) return;
+    if (editingType === "SHELF" && !editingCategory) return;
     setBusy(true);
     try {
-      await onUpdate(entity.id, { type: editingType, name: editingName }, entity);
+      await onUpdate(
+        entity.id,
+        {
+          type: editingType,
+          name: editingName,
+          category: editingType === "SHELF" ? editingCategory : null,
+        },
+        entity,
+      );
       setEditingId(null);
       setEditingType("AUTHOR");
       setEditingName("");
+      setEditingCategory("");
     } finally {
       setBusy(false);
     }
@@ -96,7 +127,10 @@ export function EntityManager({ entities, locale, onCreate, onUpdate, onDelete }
       <form onSubmit={submit} className="mt-4 grid gap-2 sm:grid-cols-[130px_1fr_auto]">
         <select
           value={type}
-          onChange={(event) => setType(event.target.value as EntityType)}
+          onChange={(event) => {
+            setType(event.target.value as EntityType);
+            setCategory("");
+          }}
           className="input"
         >
           <option value="AUTHOR">{t.labels.AUTHOR.singular}</option>
@@ -107,12 +141,29 @@ export function EntityManager({ entities, locale, onCreate, onUpdate, onDelete }
           value={name}
           onChange={(event) => setName(event.target.value)}
           className="input"
-          placeholder={`${locale === "ar" ? "اسم" : "Name"} ${t.labels[type].singular}`}
+          placeholder={`${t.name} ${t.labels[type].singular}`}
         />
-        <button type="submit" disabled={busy} className="secondary-button">
+        <button type="submit" disabled={busy || !canCreate} className="secondary-button disabled:cursor-not-allowed disabled:opacity-50">
           <Plus size={17} />
           {t.add}
         </button>
+        {type === "SHELF" ? (
+          <select
+            value={category}
+            onChange={(event) => setCategory(event.target.value)}
+            className="input sm:col-span-3"
+            aria-label={t.categoryForShelf}
+            disabled={categories.length === 0}
+            required
+          >
+            <option value="">{categories.length === 0 ? t.createCategoryFirst : t.chooseCategory}</option>
+            {categories.map((item) => (
+              <option key={item.id} value={item.name}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+        ) : null}
       </form>
 
       <div className="mt-4 grid gap-4">
@@ -138,7 +189,10 @@ export function EntityManager({ entities, locale, onCreate, onUpdate, onDelete }
                       <>
                         <select
                           value={editingType}
-                          onChange={(event) => setEditingType(event.target.value as EntityType)}
+                          onChange={(event) => {
+                            setEditingType(event.target.value as EntityType);
+                            if (event.target.value !== "SHELF") setEditingCategory("");
+                          }}
                           className="h-7 rounded border border-stone-300 bg-white px-2 text-sm text-stone-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
                         >
                           <option value="AUTHOR">{t.labels.AUTHOR.singular}</option>
@@ -150,6 +204,21 @@ export function EntityManager({ entities, locale, onCreate, onUpdate, onDelete }
                           onChange={(event) => setEditingName(event.target.value)}
                           className="h-7 min-w-0 rounded border border-stone-300 bg-white px-2 text-sm text-stone-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
                         />
+                        {editingType === "SHELF" ? (
+                          <select
+                            value={editingCategory}
+                            onChange={(event) => setEditingCategory(event.target.value)}
+                            className="h-7 rounded border border-stone-300 bg-white px-2 text-sm text-stone-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+                            aria-label={t.categoryForShelf}
+                          >
+                            <option value="">{t.chooseCategory}</option>
+                            {categories.map((item) => (
+                              <option key={item.id} value={item.name}>
+                                {item.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : null}
                         <button
                           type="button"
                           onClick={() => void saveEdit(entity)}
@@ -168,6 +237,11 @@ export function EntityManager({ entities, locale, onCreate, onUpdate, onDelete }
                     ) : (
                       <>
                         <span className="truncate">{entity.name}</span>
+                        {entity.type === "SHELF" && entity.category ? (
+                          <span className="rounded bg-teal-50 px-1.5 py-0.5 text-xs text-teal-800 dark:bg-teal-950 dark:text-teal-200">
+                            {entity.category}
+                          </span>
+                        ) : null}
                         <button
                           type="button"
                           title={t.edit}
@@ -175,6 +249,7 @@ export function EntityManager({ entities, locale, onCreate, onUpdate, onDelete }
                             setEditingId(entity.id);
                             setEditingType(entity.type);
                             setEditingName(entity.name);
+                            setEditingCategory(entity.category ?? "");
                           }}
                         >
                           <Pencil size={14} />

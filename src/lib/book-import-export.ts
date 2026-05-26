@@ -4,7 +4,7 @@ import { entityInputSchema, type EntityInput } from "./entity-schema";
 
 const importPayloadSchema = z.object({
   books: z.array(bookInputSchema),
-  entities: z.array(entityInputSchema).optional().default([]),
+  entities: z.array(z.unknown()).optional().default([]),
 });
 
 export type ExportPayload = {
@@ -33,5 +33,25 @@ export function parseImportedBooks(payload: unknown): BookInput[] {
 }
 
 export function parseImportedEntities(payload: unknown): EntityInput[] {
-  return importPayloadSchema.parse(payload).entities;
+  const parsed = importPayloadSchema.parse(payload);
+  const shelfCategories = new Map(
+    parsed.books.map((book) => [book.shelf.trim(), book.category.trim()] as const),
+  );
+
+  return parsed.entities.map((entity) =>
+    entityInputSchema.parse(withLegacyShelfCategory(entity, shelfCategories)),
+  );
+}
+
+function withLegacyShelfCategory(entity: unknown, shelfCategories: Map<string, string>) {
+  if (!entity || typeof entity !== "object" || Array.isArray(entity)) return entity;
+  const candidate = entity as { type?: unknown; name?: unknown; category?: unknown };
+  if (candidate.type !== "SHELF" || candidate.category || typeof candidate.name !== "string") {
+    return entity;
+  }
+
+  return {
+    ...candidate,
+    category: shelfCategories.get(candidate.name.trim()) ?? "Uncategorized",
+  };
 }
