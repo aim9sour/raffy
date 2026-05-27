@@ -157,18 +157,18 @@ export function BookForm({
       </Field>
 
       <Field label={t.author}>
-        <select
+        <input
           value={form.author}
           onChange={(event) => setForm({ ...form, author: event.target.value })}
           className="input"
-        >
-          <option value="">{t.noAuthor}</option>
+          list="author-suggestions"
+          placeholder={t.noAuthor}
+        />
+        <datalist id="author-suggestions">
           {authorOptions.map((author) => (
-            <option key={author} value={author}>
-              {author}
-            </option>
+            <option key={author} value={author} />
           ))}
-        </select>
+        </datalist>
       </Field>
 
       <Field label={t.coverUrl}>
